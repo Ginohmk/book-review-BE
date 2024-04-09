@@ -1,7 +1,7 @@
 const express = require('express');
 let books = require('./booksdb.js');
-let isValid = require('./auth_users.js').isValid;
-let users = require('./auth_users.js').users;
+let { isValid, users } = require('./auth_users.js');
+
 const public_users = express.Router();
 
 public_users.post('/register', (req, res) => {
@@ -9,7 +9,7 @@ public_users.post('/register', (req, res) => {
   const { username, password } = req.body;
 
   if (username && password) {
-    if (!isValid) {
+    if (!isValid(username)) {
       users.push({ username, password });
       return res
         .status(200)
@@ -23,22 +23,23 @@ public_users.post('/register', (req, res) => {
 });
 
 // Get the book list available in the shop
-public_users.get('/', function (req, res) {
+public_users.get('/', async function (req, res) {
   //Write your code here
 
-  if (users.length === 0) {
-    res.status(201).json({ message: 'No user avialable' });
+  const allBooks = await books;
+  if (books.length === 0) {
+    res.status(201).json({ message: 'No book avialable' });
   } else {
-    return res.status(200).json({ data: users });
+    return res.status(200).json({ data: allBooks });
   }
 });
 
 // Get book details based on ISBN
-public_users.get('/isbn/:isbn', function (req, res) {
+public_users.get('/isbn/:isbn', async function (req, res) {
   //Write your code here
   const { isbn } = req.params;
 
-  const filteredBooks = books.filter((book) => book.isbn === isbn);
+  const filteredBooks = await books[`${isbn}`];
   return res.status(200).json({ data: filteredBooks });
 });
 
@@ -46,7 +47,14 @@ public_users.get('/isbn/:isbn', function (req, res) {
 public_users.get('/author/:author', function (req, res) {
   //Write your code here
   const { author } = req.params;
-  const filteredAuthor = books.filter((book) => book.author === author);
+
+  let filteredAuthor;
+
+  Object.entries(books).forEach(([key, value]) => {
+    if (value.author === author) {
+      filteredAuthor = value;
+    }
+  });
   return res.status(200).json({ data: filteredAuthor });
 });
 
@@ -54,17 +62,24 @@ public_users.get('/author/:author', function (req, res) {
 public_users.get('/title/:title', function (req, res) {
   //Write your code here
   const { title } = req.params;
-  const filteredTitle = books.filter((book) => book.title === title);
-  return res.status(200).json({ data: filteredTitle });
+
+  let filteredBook;
+
+  Object.entries(books).forEach(([key, value]) => {
+    if (value.title === title) {
+      filteredBook = value;
+    }
+  });
+  return res.status(200).json({ data: filteredBook });
 });
 
 //  Get book review
-public_users.get('/review/:isbn', function (req, res) {
+public_users.get('/review/:isbn', async function (req, res) {
   //Write your code here
   const { isbn } = req.params;
-  const filteredTitle = books.filter((book) => book.isbn === isbn);
+  const filteredBookReviews = await books[`${isbn}`].reviews;
 
-  return res.status(200).json({ data: filteredTitle.reviews });
+  return res.status(200).json({ data: filteredBookReviews });
 });
 
 module.exports.general = public_users;
